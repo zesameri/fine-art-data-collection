@@ -1,10 +1,11 @@
+import os
 import requests
 import asyncio
 import aiohttp
 import time
 import json
-
-os.environ.setdefault('AIOHTTP_NO_EXTENSIONS', '1')
+import random
+import urllib.request
 
 base_url='https://collectionapi.metmuseum.org/public/collection/v1/objects'
 resp = requests.get(url=base_url)
@@ -13,8 +14,7 @@ object_ids_list = resp.json()["objectIDs"]
 print(len(object_ids_list))
 
 object_url_list = [f"{base_url}/{s}" for s in object_ids_list]
-short_list = object_url_list[-2:]
-short_list
+short_list = random.sample(object_url_list,10)
 
 async def get(url, session):
   try:
@@ -47,16 +47,8 @@ def get_objects_sync(urls):
     return data
 
 
-        
-
 start = time.time()
-# await main(object_url_list)
-# loop = asyncio.get_event_loop()
-# data = asyncio.run_coroutine_threadsafe(main(short_list), loop).result()
-# end = time.time()
-
-start = time.time()
-data = asyncio.run(main(object_url_list))
+data = asyncio.run(main(short_list))
 end = time.time()
 
 print("Took {} seconds to pull {} websites.".format(end - start, len(data)))
@@ -64,4 +56,14 @@ print(type(data[0]))
 print(data)
 
 data_with_image_links = [d for d in data if d['primaryImage']]
-print(data_with_image_links)
+print(f"Number of images found: {len(data_with_image_links)}")
+
+for image_data in data_with_image_links:
+    image_link = image_data['primaryImage']
+    local_file = f"img/{image_link.split('/')[-1]}"
+    urllib.request.urlretrieve(image_link, local_file)
+    image_data["localLink"] = local_file
+    # instead save to s3 bucket
+
+print("Images retrieved")
+
